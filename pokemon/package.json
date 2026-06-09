@@ -1,0 +1,10 @@
+{
+  "name": "pokemon-cli",
+  "version": "1.0.0",
+  "bin": {
+    "pokemon": "index.js"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.10.1"
+  }
+}

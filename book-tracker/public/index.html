@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📚 Book Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'DM Sans', sans-serif; background: #0f0e17; color: #fffffe; }
+    h1, h2, h3 { font-family: 'Playfair Display', serif; }
+
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 1rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,100,80,0.1); }
+
+    .progress-bar {
+      height: 8px;
+      border-radius: 99px;
+      background: #2a2a4a;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #ff6b6b, #feca57);
+      transition: width 0.6s ease;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 99px;
+      letter-spacing: 0.05em;
+    }
+    .badge-read       { background:#1a472a; color:#6fcf97; }
+    .badge-reread     { background:#1a3a5a; color:#56ccf2; }
+    .badge-dnf        { background:#4a1a1a; color:#eb5757; }
+    .badge-current    { background:#3a2a0a; color:#f2c94c; }
+    .badge-returned   { background:#2a2a2a; color:#bdbdbd; }
+    .badge-want       { background:#2a1a4a; color:#bb6bd9; }
+
+    input, select {
+      background: #0f0e17;
+      border: 1px solid #2a2a4a;
+      color: #fffffe;
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #ff6b6b;
+    }
+    label { font-size: 0.82rem; color: #a7a9be; margin-bottom: 4px; display: block; font-weight: 500; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ff6b6b, #feca57);
+      color: #0f0e17;
+      font-weight: 700;
+      border-radius: 0.6rem;
+      padding: 0.65rem 1.5rem;
+      cursor: pointer;
+      border: none;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: scale(1.02); }
+
+    .btn-delete {
+      background: transparent;
+      border: 1px solid #4a1a1a;
+      color: #eb5757;
+      border-radius: 0.5rem;
+      padding: 0.3rem 0.8rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s;
+    }
+    .btn-delete:hover { background: #4a1a1a; }
+
+    .stat-card {
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 1px solid #2a2a4a;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .toast {
+      position: fixed; bottom: 2rem; right: 2rem;
+      background: #1a472a; color: #6fcf97;
+      border-radius: 0.75rem; padding: 1rem 1.5rem;
+      font-weight: 600; z-index: 999;
+      opacity: 0; transform: translateY(20px);
+      transition: all 0.3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #4a1a1a; color: #eb5757; }
+
+    select option { background: #1a1a2e; }
+
+    /* Checkbox "Livre terminé" */
+    .finish-checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+      cursor: pointer;
+      width: fit-content;
+    }
+    .finish-checkbox-wrapper input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      padding: 0;
+      border: 2px solid #6fcf97;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      accent-color: #6fcf97;
+      transition: all 0.2s;
+    }
+    .finish-checkbox-wrapper label {
+      font-size: 0.82rem;
+      color: #6fcf97;
+      font-weight: 600;
+      margin: 0;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+    }
+    .finish-checkbox-wrapper.done label {
+      color: #a7a9be;
+      text-decoration: line-through;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f0e17; }
+    ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <header class="border-b border-[#2a2a4a] px-6 py-5 flex items-center justify-between sticky top-0 z-10" style="background:#0f0e17cc; backdrop-filter:blur(12px);">
+    <div>
+      <h1 class="text-3xl" style="background:linear-gradient(135deg,#ff6b6b,#feca57);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+        📚 Book Tracker
+      </h1>
+      <p class="text-sm" style="color:#a7a9be;">Suis ta progression de lecture</p>
+    </div>
+    <button class="btn-primary" onclick="toggleForm()">+ Ajouter un livre</button>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-6 py-8 space-y-8">
+
+    <!-- ── Statistiques globales ── -->
+    <section>
+      <h2 class="text-xl mb-4" style="color:#a7a9be;">Vue d'ensemble</h2>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="stat-card">
+          <div id="stat-total" class="text-4xl font-black" style="font-family:'Playfair Display',serif; color:#feca57;">0</div>
+          <div class="text-sm mt-1" style="color:#a7a9be;">Livres au total</div>
+        </div>
+        <div class="stat-card">
+          <div id="stat-finished" class="text-4xl font-black" style="font-family:'Playfair Display',serif; color:#6fcf97;">0</div>
+          <div class="text-sm mt-1" style="color:#a7a9be;">Livres terminés</div>
+        </div>
+        <div class="stat-card">
+          <div id="stat-pages" class="text-4xl font-black" style="font-family:'Playfair Display',serif; color:#ff6b6b;">0</div>
+          <div class="text-sm mt-1" style="color:#a7a9be;">Pages lues</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Formulaire d'ajout ── -->
+    <section id="form-section" class="hidden">
+      <div class="card p-6">
+        <h2 class="text-xl mb-6">Ajouter un livre</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label>Titre *</label>
+            <input id="f-title" type="text" placeholder="Ex: Le Petit Prince" />
+          </div>
+          <div>
+            <label>Auteur *</label>
+            <input id="f-author" type="text" placeholder="Ex: Antoine de Saint-Exupéry" />
+          </div>
+          <div>
+            <label>Nombre de pages *</label>
+            <input id="f-pages" type="number" min="1" placeholder="300" />
+          </div>
+          <div>
+            <label>Pages lues</label>
+            <input id="f-pagesRead" type="number" min="0" placeholder="0" />
+          </div>
+          <div>
+            <label>Prix (€)</label>
+            <input id="f-price" type="number" min="0" step="0.01" placeholder="15.90" />
+          </div>
+          <div>
+            <label>Suggéré par *</label>
+            <input id="f-suggestedBy" type="text" placeholder="Ex: Marie" />
+          </div>
+          <div>
+            <label>Statut *</label>
+            <select id="f-status">
+              <option value="">-- Choisir --</option>
+              <option value="Read">Read</option>
+              <option value="Re-read">Re-read</option>
+              <option value="DNF">DNF</option>
+              <option value="Currently reading">Currently reading</option>
+              <option value="Returned Unread">Returned Unread</option>
+              <option value="Want to read">Want to read</option>
+            </select>
+          </div>
+          <div>
+            <label>Format *</label>
+            <select id="f-format">
+              <option value="">-- Choisir --</option>
+              <option value="Print">Print</option>
+              <option value="PDF">PDF</option>
+              <option value="Ebook">Ebook</option>
+              <option value="AudioBook">AudioBook</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button class="btn-primary" onclick="addBook()">Enregistrer</button>
+          <button onclick="toggleForm()" style="background:#2a2a4a;color:#fffffe;border:none;border-radius:0.6rem;padding:0.65rem 1.5rem;cursor:pointer;font-family:'DM Sans',sans-serif;">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Liste des livres ── -->
+    <section>
+      <h2 class="text-xl mb-4" style="color:#a7a9be;">Ma bibliothèque</h2>
+      <div id="books-list" class="grid grid-cols-1 gap-4">
+        <div class="text-center py-16" style="color:#a7a9be;">
+          <div class="text-5xl mb-3">📖</div>
+          <p>Aucun livre pour l'instant. Commence par en ajouter un !</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast"></div>
+
+  <script>
+    const API = '/api/books';
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast' + (isError ? ' error' : '') + ' show';
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function toggleForm() {
+      const s = document.getElementById('form-section');
+      s.classList.toggle('hidden');
+      if (!s.classList.contains('hidden')) s.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function badgeClass(status) {
+      const map = {
+        'Read': 'badge-read',
+        'Re-read': 'badge-reread',
+        'DNF': 'badge-dnf',
+        'Currently reading': 'badge-current',
+        'Returned Unread': 'badge-returned',
+        'Want to read': 'badge-want',
+      };
+      return map[status] || 'badge-want';
+    }
+
+    function formatIcon(format) {
+      const icons = { Print: '📗', PDF: '📄', Ebook: '📱', AudioBook: '🎧' };
+      return icons[format] || '📚';
+    }
+
+    // ── Charger les livres ────────────────────────────────────────────────────
+
+    async function loadBooks() {
+      try {
+        const res = await fetch(API);
+        const data = await res.json();
+        renderStats(data.stats);
+        renderBooks(data.books);
+      } catch (e) {
+        showToast('Erreur de chargement', true);
+      }
+    }
+
+    function renderStats(stats) {
+      document.getElementById('stat-total').textContent = stats.totalBooks;
+      document.getElementById('stat-finished').textContent = stats.finishedBooks;
+      document.getElementById('stat-pages').textContent = stats.totalPagesRead.toLocaleString('fr-FR');
+    }
+
+    function renderBooks(books) {
+      const container = document.getElementById('books-list');
+      if (!books.length) {
+        container.innerHTML = `
+          <div class="text-center py-16" style="color:#a7a9be;">
+            <div class="text-5xl mb-3">📖</div>
+            <p>Aucun livre pour l'instant. Commence par en ajouter un !</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = books.map(book => {
+        const pct = book.pages > 0 ? Math.min(Math.round((book.pagesRead / book.pages) * 100), 100) : 0;
+        const pctColor = pct === 100 ? '#6fcf97' : pct > 50 ? '#feca57' : '#ff6b6b';
+        return `
+        <div class="card p-5">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap mb-1">
+                <span class="text-lg">${formatIcon(book.format)}</span>
+                <h3 class="text-lg font-bold truncate">${escHtml(book.title)}</h3>
+                ${book.finished ? '<span style="font-size:1rem;">✅</span>' : ''}
+                <span class="badge ${badgeClass(book.status)}">${escHtml(book.status)}</span>
+              </div>
+              <p class="text-sm mb-3" style="color:#a7a9be;">
+                par <strong style="color:#fffffe;">${escHtml(book.author)}</strong>
+                &nbsp;·&nbsp; suggéré par ${escHtml(book.suggestedBy)}
+                &nbsp;·&nbsp; ${book.format}
+                ${book.price ? `&nbsp;·&nbsp; ${book.price}€` : ''}
+              </p>
+
+              <!-- Barre de progression -->
+              <div class="flex items-center gap-3">
+                <div class="progress-bar flex-1">
+                  <div class="progress-fill" style="width:${pct}%; background:linear-gradient(90deg,${pctColor},${pctColor}cc);"></div>
+                </div>
+                <span class="text-sm font-bold" style="color:${pctColor}; min-width:40px;">${pct}%</span>
+              </div>
+              <p class="text-xs mt-1" style="color:#a7a9be;">${book.pagesRead} / ${book.pages} pages</p>
+
+              <!-- Checkbox "Livre terminé" -->
+              <div class="finish-checkbox-wrapper${book.finished ? ' done' : ''}" id="check-wrap-${book._id}">
+                <input
+                  type="checkbox"
+                  id="check-${book._id}"
+                  ${book.finished ? 'checked disabled' : ''}
+                  onchange="markFinished('${book._id}', ${book.pages}, this)"
+                />
+                <label for="check-${book._id}">
+                  ${book.finished ? '✅ Livre terminé !' : 'Marquer comme terminé'}
+                </label>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex flex-col gap-2 shrink-0">
+              <button class="btn-delete" onclick="deleteBook('${book._id}')">🗑 Supprimer</button>
+              <button onclick="openUpdateModal('${book._id}', ${book.pagesRead}, ${book.pages})"
+                style="background:transparent;border:1px solid #2a3a5a;color:#56ccf2;border-radius:0.5rem;padding:0.3rem 0.8rem;cursor:pointer;font-size:0.8rem;font-family:'DM Sans',sans-serif;transition:background 0.2s;"
+                onmouseover="this.style.background='#1a2a4a'" onmouseout="this.style.background='transparent'">
+                ✏️ Progression
+              </button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function escHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str ?? '';
+      return d.innerHTML;
+    }
+
+    // ── Ajouter un livre ──────────────────────────────────────────────────────
+
+    async function addBook() {
+      const data = {
+        title:       document.getElementById('f-title').value.trim(),
+        author:      document.getElementById('f-author').value.trim(),
+        pages:       Number(document.getElementById('f-pages').value),
+        pagesRead:   Number(document.getElementById('f-pagesRead').value || 0),
+        price:       Number(document.getElementById('f-price').value || 0),
+        suggestedBy: document.getElementById('f-suggestedBy').value.trim(),
+        status:      document.getElementById('f-status').value,
+        format:      document.getElementById('f-format').value,
+      };
+
+      if (!data.title || !data.author || !data.pages || !data.status || !data.format || !data.suggestedBy) {
+        showToast('Merci de remplir tous les champs obligatoires (*)', true);
+        return;
+      }
+
+      try {
+        const res = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          showToast(err.message || 'Erreur lors de l\'ajout', true);
+          return;
+        }
+        showToast('📚 Livre ajouté avec succès !');
+        toggleForm();
+        ['f-title','f-author','f-pages','f-pagesRead','f-price','f-suggestedBy'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('f-status').value = '';
+        document.getElementById('f-format').value = '';
+        loadBooks();
+      } catch (e) {
+        showToast('Erreur réseau', true);
+      }
+    }
+
+    // ── Supprimer un livre ────────────────────────────────────────────────────
+
+    async function deleteBook(id) {
+      if (!confirm('Supprimer ce livre ?')) return;
+      try {
+        await fetch(`${API}/${id}`, { method: 'DELETE' });
+        showToast('Livre supprimé');
+        loadBooks();
+      } catch (e) {
+        showToast('Erreur lors de la suppression', true);
+      }
+    }
+
+    // ── Mettre à jour la progression ──────────────────────────────────────────
+
+    function openUpdateModal(id, currentPages, maxPages) {
+      const newVal = prompt(`Pages lues (max ${maxPages}) :`, currentPages);
+      if (newVal === null) return;
+      const parsed = parseInt(newVal);
+      if (isNaN(parsed) || parsed < 0 || parsed > maxPages) {
+        showToast(`Valeur invalide (0 à ${maxPages})`, true);
+        return;
+      }
+      updateProgress(id, parsed);
+    }
+
+    async function updateProgress(id, pagesRead) {
+      try {
+        const res = await fetch(`${API}/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pagesRead }),
+        });
+        if (!res.ok) { showToast('Erreur de mise à jour', true); return; }
+        showToast('✅ Progression mise à jour !');
+        loadBooks();
+      } catch (e) {
+        showToast('Erreur réseau', true);
+      }
+    }
+
+    // ── Marquer un livre comme terminé (checkbox) ─────────────────────────────
+
+    async function markFinished(id, totalPages, checkbox) {
+      // Prevent double-click
+      checkbox.disabled = true;
+      const wrapper = document.getElementById('check-wrap-' + id);
+      const lbl = wrapper ? wrapper.querySelector('label') : null;
+
+      try {
+        const res = await fetch(`${API}/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pagesRead: totalPages }),
+        });
+        if (!res.ok) {
+          showToast('Erreur lors de la mise à jour', true);
+          checkbox.checked = false;
+          checkbox.disabled = false;
+          return;
+        }
+        showToast('🎉 Félicitations, livre terminé !');
+        if (wrapper) wrapper.classList.add('done');
+        if (lbl) lbl.textContent = '✅ Livre terminé !';
+        // Reload all (stats + list)
+        loadBooks();
+      } catch (e) {
+        showToast('Erreur réseau', true);
+        checkbox.checked = false;
+        checkbox.disabled = false;
+      }
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadBooks();
+  </script>
+</body>
+</html>
